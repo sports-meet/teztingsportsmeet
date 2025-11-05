@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sunrise Sports Meet Registration</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+body {
+    background-color: #f8f9fa;
+    font-family: 'Inter', sans-serif;
+    color: #111;
+} /* Closed for body */
+
+h1,h2,h3,h4,h5,h6 { font-weight: 800; } /* Closed for h1-h6 */
+
+.app-card {
+    @apply bg-white shadow-xl rounded-3xl p-8 md:p-12 border border-gray-200;
+}
+.app-input {
+    @apply mt-1 block w-full border border-gray-300 rounded-lg p-3.5 text-gray-900 text-lg bg-gray-50 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-150;
+}
+.app-button {
+    @apply font-bold text-lg px-8 py-3 rounded-xl shadow-lg transition duration-200 ease-in-out transform;
+}
+.app-button-primary { @apply bg-gradient-to-r from-red-500 via-yellow-400 to-green-500 text-white hover:scale-105; }
+.app-button-blue { @apply bg-blue-600 text-white hover:bg-blue-700; }
+.app-button-red { @apply bg-red-600 text-white hover:bg-red-700; }
+.app-button-green { @apply bg-green-600 text-white hover:bg-green-700; }
+.app-button:disabled { @apply opacity-50 cursor-not-allowed transform-none shadow-none; }
+
+.modal-overlay { background-color: rgba(0,0,0,0.6); }
+
+/* Custom styling for admin table */
+#adminTable { @apply w-full text-left table-auto border-collapse; }
+#adminTable th { @apply p-4 bg-gray-100 text-gray-600 text-sm font-semibold uppercase tracking-wider border-b-2 border-gray-200; }
+#adminTable td { @apply p-4 text-gray-800 border-b border-gray-100 align-top; }
+#adminTable tr:nth-child(even) { background-color: #f7f9fa; }
+#adminTable tr:hover { background-color: #e9f2ff; transition: background-color 0.2s; }
+
+/* Event Checkboxes - MUST BE HIDDEN to use the styled label */
+#eventList label {
+    @apply block p-3 bg-white border border-gray-300 rounded-xl transition duration-150 shadow-sm text-center cursor-pointer select-none text-gray-700 hover:bg-gray-50;
+}
+#eventList input[type="checkbox"]:checked + label {
+    @apply bg-blue-600 text-white border-blue-700 ring-2 ring-blue-700 font-bold shadow-lg;
+    transform: scale(1.0);
+}
+#eventList input[type="checkbox"] {
+    display: none;
+}
+
+/* NEW: Shake animation for error feedback */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.animate-shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* --- PRINT/PDF STYLING --- */
+@media print {
+    @page {
+        margin: 0.5cm !important; /* Reduced margins */
+        size: A4 portrait;
+    }
+    body > *:not(#printArea):not(#printArea *) {
+        display: none !important;
+    }
+    #printArea {
+        display: block !important;
+        width: 100 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 19.5cm !important; /* Slightly less than A4 width to account for margins */
+        background-color: white !important;
+        box-sizing: border-box !important;
+        font-size: 10pt !important; /* Smaller base font size */
+        line-height: 1.2 !important; /* Tighter line spacing */
+    }
+    #printArea .app-card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 5px !important; /* Reduced padding */
+        background-color: white !important;
+    }
+    #printArea * {
+        color: black !important;
+        background-color: white !important;
+    }
+    #printArea header h1 {
+        font-weight: 800 !important;
+        text-align: center !important;
+        font-size: 12pt !important; /* Reduced from 1rem (likely 16pt) */
+        line-height: 1.1 !important;
+        margin-bottom: 2px !important;
+    }
+    #printArea header h2 {
+        text-align: center !important;
+        font-size: 8pt !important; /* Reduced */
+        font-weight: 700 !important;
+        margin-bottom: 5px !important;
+        padding-bottom: 2px !important;
+        border-bottom: 1px solid #333 !important;
+    }
+    .print-info-section p {
+        display: flex !important;
+        align-items: flex-end !important;
+        margin-bottom: 2px !important; /* Reduced */
+        font-size: 8pt !important; /* Reduced */
+    }
+    .print-info-section .grid {
+        display: flex !important;
+        gap: 5px !important; /* Reduced */
+    }
+    #printArea .events-list {
+        margin-left: 0 !important;
+        list-style-position: inside !important;
+    }
+    #printArea .events-list li {
+        font-size: 8pt !important; /* Reduced */
+        margin-bottom: 2px !important; /* Reduced */
+    }
+    .print-info-section, .border-t, .pt-4 {
+        padding-top: 5px !important; /* Reduced */
+        margin-top: 5px !important; /* Reduced */
+    }
+    .space-y-8 {
+        --space-y-reverse: 0;
+        margin-top: 0 !important;
+    }
+    .underline {
+        border-bottom: 1px solid black !important;
+        display: inline-block !important;
+        min-width: 150px !important; /* Slightly reduced */
+    }
+    .underline-short {
+        min-width: 40px !important; /* Reduced */
+    }
+    .underline-medium {
+        min-width: 80px !important; /* Reduced */
+    }
+    #savePdfBtn, #doneBtn, #previewPdfBtn {
+        display: none !important;
+    }
+    #printArea img {
+        width: 60px !important; /* Reduced logo size */
+        height: auto !important;
+        margin-right: 5px !important; /* Reduced */
+    }
+
+    /* New breathing animation style for submit button */
+    #sportsForm .submit-input {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        padding: 15px 32px !important;
+        border: none !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 16px !important;
+        font-weight: bold !important;
+        transition: all 0.3s ease-in-out !important;
+        animation: breathe 2s infinite !important;
+        width: 100% !important; /* Override w-full if needed */
+        margin-top: 2.5rem !important; /* Override mt-10 */
+    }
+
+    #sportsForm .submit-input:hover {
+        background-color: #45a049 !important;
+        animation-play-state: paused !important;
+    }
+
+    @keyframes breathe {
+        0% { transform: scale(1) !important; }
+        50% { transform: scale(0.95) !important; }
+        100% { transform: scale(1) !important; }
+    }
+</style>
+</head>
+<body class="flex justify-center items-start pt-10 pb-20 md:items-center">
+
+<div id="confirmationModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay">
+    <div class="bg-white rounded-3xl p-8 w-11/12 max-w-md shadow-2xl border border-gray-200">
+        <h3 id="modalTitle" class="text-2xl font-extrabold text-gray-900 mb-4 border-b border-gray-300 pb-2">Confirm Action</h3>
+        <p id="modalMessage" class="text-gray-700 mb-6"></p>
+        <div class="flex justify-end space-x-3">
+            <button id="modalCancelBtn" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition shadow-md">Cancel</button>
+            <button id="modalConfirmBtn" class="px-5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition shadow-md">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div id="adminLoginModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay">
+    <div class="bg-white rounded-3xl p-8 w-11/12 max-w-md shadow-2xl border border-gray-200">
+        <h3 class="text-2xl font-extrabold text-gray-900 mb-4 border-b border-red-500 pb-2">Admin Access Required</h3>
+        <p class="text-gray-700 mb-4">Enter the administrator password to access the dashboard.</p>
+        <input type="password" id="adminPasswordInput" class="app-input" placeholder="Enter Password" required>
+        <p id="passwordError" class="text-sm text-red-600 mt-2 hidden">Incorrect password. Please try again.</p>
+        <div class="flex justify-end space-x-3 mt-6">
+            <button id="loginCancelBtn" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition shadow-md">Cancel</button>
+            <button id="loginSubmitBtn" class="px-5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition shadow-md">Login</button>
+        </div>
+    </div>
+</div>
+
+<div id="resultsModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay">
+    <div class="bg-white rounded-3xl p-8 w-11/12 max-w-4xl shadow-2xl border border-gray-200">
+        <h3 class="text-2xl font-extrabold text-gray-900 mb-4 border-b border-blue-500 pb-2">Manage All Event Results</h3>
+        <div class="space-y-4">
+            <input type="text" id="resultsSearch" class="app-input w-full mb-4" placeholder="Search students, classes, divisions, events, or houses...">
+            <div class="flex space-x-4 mb-4">
+                <select id="resultClassFilter" class="app-input w-1/4">
+                    <option value="">All Classes</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                </select>
+                <select id="resultDivisionFilter" class="app-input w-1/4">
+                    <option value="">All Divisions</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                    <option value="F">F</option>
+                    <option value="G">G</option>
+                    <option value="H">H</option>
+                    <option value="I">I</option>
+                    <option value="J">J</option>
+                </select>
+                <select id="resultGenderFilter" class="app-input w-1/4">
+                    <option value="">All Genders</option>
+                    <option value="Boy">Boys</option>
+                    <option value="Girl">Girls</option>
+                </select>
+                <select id="resultEventFilter" class="app-input w-1/4">
+                    <option value="">All Events</option>
+                </select>
+                <select id="resultCategoryFilter" class="app-input w-1/4">
+    <option value="">All Categories</option>
+    <option value="Sub-Junior">Sub-Junior</option>
+    <option value="Junior">Junior</option>
+    <option value="Inter">Inter</option>
+    <option value="Senior">Senior</option>
+    <option value="Super Senior">Super Senior</option>
+</select>
+
+            </div>
+            <div id="finalistsList" class="p-4 bg-gray-50 rounded-xl border border-gray-200 text-gray-800 font-medium hidden space-y-4 overflow-y-auto max-h-[60vh]"></div>
+        </div>
+        <div class="flex justify-end space-x-3 mt-6">
+            <button id="resultCancelBtn" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition shadow-md">Cancel</button>
+            <button id="resultSaveBtn" class="px-5 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition shadow-md">Save All Results</button>
+        </div>
+    </div>
+</div>
+
+<div id="messageBox" class="fixed top-5 left-1/2 transform -translate-x-1/2 p-4 rounded-xl shadow-lg text-white font-semibold z-50 transition-all duration-300 hidden"></div>
+
+<div id="mainContainer" class="hidden w-full max-w-6xl mx-auto flex items-start justify-center p-4 md:h-screen md:p-8">
+    <div id="registrationCard" class="app-card w-full max-w-4xl">
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-blue-500 to-green-500">Sunrise Sports Meet</h1>
+            <h2 class="text-xl text-gray-600 mt-2 font-light">Annual Registration 2025–2026</h2>
+        </header>
+        
+        <div id="submissionCompleteMessage" class="hidden text-center p-8 border-4 border-dashed border-green-300 rounded-2xl bg-green-50 shadow-inner">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-20 w-20 text-green-500 mb-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <h3 class="text-3xl font-extrabold text-green-700 mb-2">Registration Complete!</h3>
+            <p class="text-lg text-gray-700 mb-4">Your registration has been successfully submitted and saved. A student may only register once.</p>
+            <p class="text-md text-gray-500 font-medium">Please contact the Admin if you need to make changes.</p>
+        </div>
+
+        <form id="sportsForm" class="space-y-6">
+            <div id="registrationClosedMessage" class="hidden text-center p-8 border-4 border-dashed border-red-300 rounded-2xl bg-red-50 shadow-inner">
+  <h3 class="text-3xl font-extrabold text-red-700 mb-2">Registration Closed!</h3>
+  <p class="text-lg text-gray-700 mb-4">Student registrations are now closed. Please contact the Admin if changes are needed.</p>
+</div>
+            <div>
+                <label for="name" class="block text-sm font-semibold text-gray-700">Full Name</label>
+                <input type="text" id="name" class="app-input" required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+                <div>
+                    <label for="grNo" class="block text-sm font-semibold text-gray-700">GR Number</label>
+                    <input type="text" id="grNo" maxlength="5" pattern="\d{3,5}" class="app-input" required>
+                </div>
+                <div>
+                    <label for="class" class="block text-sm font-semibold text-gray-700">Class</label>
+                    <select id="class" class="app-input" required>
+                        <option value="" disabled selected>Select Class</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="division" class="block text-sm font-semibold text-gray-700">Division</label>
+                    <select id="division" class="app-input" required>
+                        <option value="" disabled selected>Select Division</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="G">G</option>
+                        <option value="H">H</option>
+                        <option value="I">I</option>
+                        <option value="J">J</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="gender" class="block text-sm font-semibold text-gray-700">Gender</label>
+                    <select id="gender" class="app-input" required>
+                        <option value="" disabled selected>Select Gender</option>
+                        <option value="Boy">Boy</option>
+                        <option value="Girl">Girl</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="house" class="block text-sm font-semibold text-gray-700">Sports House</label>
+                    <select id="house" class="app-input appearance-none bg-gray-50" required>
+                        <option value="" disabled selected>Select House</option>
+                        <option value="Ruby">Ruby</option>
+                        <option value="Sapphire">Sapphire</option>
+                        <option value="Topaz">Topaz</option>
+                        <option value="Emerald">Emerald</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="dob" class="block text-sm font-semibold text-gray-700">Date of Birth</label>
+                    <input type="date" id="dob" min="2005-01-01" max="2018-12-31" class="app-input" required>
+                </div>
+                <div>
+                    <label for="category" class="block text-sm font-semibold text-gray-700">Calculated Category</label>
+                    <input type="text" id="category" class="app-input bg-gray-100 text-gray-800 font-bold" readonly placeholder="Enter DOB to calculate">
+                </div>
+            </div>
+
+            <div id="eventsSection" class="hidden mt-8 p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 shadow-inner">
+                <label class="block text-lg font-bold text-gray-800 mb-3">Select Events</label>
+                <div id="eventList" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+                <p id="eventNote" class="text-sm text-gray-600 mt-4 font-medium"></p>
+            </div>
+
+            <button type="submit" class="submit-input mt-10 w-full" data-editing-id="">Submit Registration</button>
+            
+         <!-- Forgot to Download? (Inside form, under Submit) -->
+<div id="pdfDownloadSection" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center" style="display: none;">
+    <p class="text-sm font-medium text-blue-800 mb-2">Forgot to download your form?</p>
+    <div class="flex gap-2 max-w-xs mx-auto">
+        <input type="text" id="lookupGrNo" maxlength="5" 
+               class="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-center"
+               placeholder="GR No">
+        <button id="downloadByGrBtn" 
+                class="px-4 py-2 text-sm font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
+            Download
+        </button>
+    </div>
+</div>
+        </form>
+    </div>
+</div>
+
+
+
+<div id="printArea" class="hidden w-full max-w-6xl mx-auto flex items-start justify-center p-4 md:p-8">
+    <div class="app-card w-full max-w-4xl space-y-8">
+        <h1 id="summaryTitle" class="text-4xl font-extrabold text-blue-800 text-center">Registration Confirmed!</h1>
+        <div id="summaryDetails" class="space-y-4"></div>
+        
+        <div class="flex flex-col sm:flex-row justify-center sm:space-x-4 pt-4 border-t border-gray-200">
+            <button id="savePdfBtn" class="app-button app-button-blue text-base py-3 px-6 shadow-md mb-3 sm:mb-0">
+                Save Registration Form as PDF
+            </button>
+            <button id="doneBtn" class="app-button app-button-green text-base py-3 px-6 shadow-md">
+                Done, Return to Info
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="adminPanel" class="hidden w-full max-w-7xl mx-auto mt-0 sm:mt-10 bg-white p-6 sm:p-8 rounded-3xl shadow-2xl border border-gray-200 min-h-screen">
+    <header class="flex justify-between items-center mb-6 border-b pb-4">
+        <h2 class="text-4xl font-extrabold text-blue-800">Admin Dashboard</h2>
+        <button id="backToFormBtn" class="app-button app-button-blue text-base py-2 px-4 shadow-md">
+            ← Back to Registration
+        </button>
+    </header>
+    <button id="toggleRegistrationBtn" class="app-button app-button-red text-base py-2 px-4 shadow-md mb-4">
+        Close Registration
+    </button>
+
+    <div class="flex space-x-4 mb-6">
+        <div class="p-4 bg-blue-100 rounded-xl flex-1 text-center border-2 border-blue-200">
+            <h3 class="text-lg font-semibold text-blue-800">Boys Registered</h3>
+            <p id="boyCount" class="text-4xl font-extrabold text-blue-900 mt-1">0</p>
+        </div>
+        <div class="p-4 bg-pink-100 rounded-xl flex-1 text-center border-2 border-pink-200">
+            <h3 class="text-lg font-semibold text-pink-800">Girls Registered</h3>
+            <p id="girlCount" class="text-4xl font-extrabold text-pink-900 mt-1">0</p>
+        </div>
+    </div>
+
+    <div class="space-y-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <input type="text" id="adminSearch" placeholder="Search Name/GR No..." class="app-input text-base col-span-2">
+            <select id="filterCategory" class="app-input text-base col-span-1">
+                <option value="">All Categories</option>
+            </select>
+            <select id="filterClass" class="app-input text-base col-span-1">
+                <option value="">All Classes</option>
+            </select>
+            <select id="filterEvent" class="app-input text-base col-span-2 md:col-span-1">
+                <option value="">All Events</option>
+            </select>
+            <select id="filterDivision" class="app-input text-base col-span-2 md:col-span-1">
+                <option value="">All Divisions</option>
+            </select>
+            <select id="filterGender" class="app-input text-base col-span-2 md:col-span-1">
+                <option value="">All Genders</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 sm:space-x-4 pt-2 border-t border-gray-100">
+            <p id="totalRegistrations" class="text-lg font-bold text-gray-700 p-3 bg-gray-100 rounded-xl whitespace-nowrap"></p>
+            <div class="flex space-x-3 w-full sm:w-auto">
+                <button id="downloadCsvBtn" class="app-button app-button-green text-base py-2 px-4 shadow-md w-1/2 sm:w-auto">Download All XLSX</button>
+                <button id="downloadFinalistsCsvBtn" class="app-button app-button-blue text-base py-2 px-4 shadow-md w-1/2 sm:w-auto">Download Finalists XLSX</button>
+                <button id="downloadResultsBtn" class="app-button app-button-red text-base py-2 px-4 shadow-md w-1/2 sm:w-auto">Download Results XLSX</button>
+                <button id="clearFiltersBtn" class="app-button app-button-red text-base py-2 px-4 shadow-md w-1/2 sm:w-auto">Clear Filters</button>
+                <button id="clearAllBtn" class="app-button app-button-red mt-2">Clear All Registrations</button>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-6">
+        <button id="manageResultsBtn" class="app-button app-button-blue text-base py-2 px-4 shadow-md">Manage Results</button>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl shadow-inner border border-gray-200">
+        <table id="adminTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>GR No</th>
+                    <th>Class/Div</th>
+                    <th>Gender</th>
+                    <th>House</th>
+                    <th>Category</th>
+                    <th>Events</th>
+                    <th class="text-center">Finalist</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="adminTableBody">
+                <tr><td colspan="9" class="text-center py-10 text-gray-500">Loading registrations...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<button id="adminBtn" class="fixed bottom-6 right-6 bg-red-500 hover:bg-red-600 text-white px-5 py-3 rounded-full shadow-xl text-sm font-semibold transform hover:scale-105 z-50">
+    Admin Panel
+</button>
+
+<script type="text/javascript">
+    var gk_isXlsx = true;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+        return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                    row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                    headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to XLSX
+                var worksheet = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                var workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+                XLSX.writeFile(workbook, filename);
+            } catch (e) {
+                console.error("Error processing file:", e);
+            }
+        }
+        return gk_fileData[filename] || "";
+    }
+</script>
+
+<script type="module">
+    // Firebase Imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, query, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    let db, auth;
+    let isDatabaseReady = false;
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    const hardcodedFirebaseConfig = {
+        apiKey: "AIzaSyC-axJOwivMy-bGhNmVIHaXORcG90gLA9g",
+        authDomain: "registration-c78dc.firebaseapp.com",
+        projectId: "registration-c78dc",
+        storageBucket: "registration-c78dc.firebasestorage.app",
+        messagingSenderId: "368136278543",
+        appId: "1:368136278543:web:03a46a62d1095f40a0497a",
+        measurementId: "G-14V6C8VSCH"
+    };
+
+    let finalConfig = hardcodedFirebaseConfig;
+    if (typeof __firebase_config !== 'undefined' && __firebase_config !== '') {
+        try {
+            finalConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            console.warn("Could not parse __firebase_config, using hardcoded config.");
+        }
+    }
+
+    if (finalConfig && finalConfig.apiKey && finalConfig.projectId) {
+        try {
+            const app = initializeApp(finalConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            isDatabaseReady = true;
+            console.log("Firebase and Firestore initialized successfully.");
+        } catch (e) {
+            console.error("Firebase Initialization Failed:", e);
+        }
+    } else {
+        console.error("Firebase Initialization Failed: Configuration is incomplete.");
+    }
+
+    const COLLECTION_PATH = `/artifacts/${appId}/public/data/registrations`;
+    const RESULTS_COLLECTION_PATH = `/artifacts/${appId}/public/data/results`;
+    const ADMIN_PASSWORD = "SUN2025";
+
+    const MIN_YEAR = 2005;
+    const MAX_YEAR = 2018;
+    const CUTOFF_2017 = '2017-01-01';
+    const CUTOFF_2015 = '2015-01-01';
+    const CUTOFF_2013 = '2013-01-01';
+    const CUTOFF_2010 = '2010-01-01';
+
+    const SPORTS_EVENTS = {
+        "Sub Junior": { maxEvents: 2, events: ["100m", "200m", "Long Jump"] },
+        "Junior": { maxEvents: 3, events: ["100m", "200m", "Long Jump", "400m"] },
+        "Inter": { maxEvents: 3, events: ["100m", "200m", "800m", "Long Jump", "Shot Put (4kg)"] },
+        "Senior": { maxEvents: 4, events: ["100m", "200m", "400m", "800m", "Long Jump", "Shot Put", "1500m"] },
+        "Super Senior": { maxEvents: 4, events: ["100m", "200m", "400m", "800m", "Long Jump", "Shot Put", "1500m"] }
+    };
+
+    const mainContainer = document.getElementById('mainContainer');
+    const adminPanel = document.getElementById('adminPanel');
+    const adminBtn = document.getElementById('adminBtn');
+    const backToFormBtn = document.getElementById('backToFormBtn');
+    const sportsForm = document.getElementById('sportsForm');
+    const dobInput = document.getElementById('dob');
+    const categoryInput = document.getElementById('category');
+    const eventsSection = document.getElementById('eventsSection');
+    const eventList = document.getElementById('eventList');
+    const eventNote = document.getElementById('eventNote');
+    const adminTableBody = document.getElementById('adminTableBody');
+    const adminSearch = document.getElementById('adminSearch');
+    const totalRegistrations = document.getElementById('totalRegistrations');
+    const submissionCompleteMessage = document.getElementById('submissionCompleteMessage');
+    const filterCategory = document.getElementById('filterCategory');
+    const filterClass = document.getElementById('filterClass');
+    const filterEvent = document.getElementById('filterEvent');
+    const filterDivision = document.getElementById('filterDivision');
+    const filterGender = document.getElementById('filterGender');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+    const downloadFinalistsCsvBtn = document.getElementById('downloadFinalistsCsvBtn');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const modal = document.getElementById('confirmationModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+    const messageBox = document.getElementById('messageBox');
+    const adminLoginModal = document.getElementById('adminLoginModal');
+    const adminPasswordInput = document.getElementById('adminPasswordInput');
+    const passwordError = document.getElementById('passwordError');
+    const loginCancelBtn = document.getElementById('loginCancelBtn');
+    const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+    const printArea = document.getElementById('printArea');
+    const summaryTitle = document.getElementById('summaryTitle');
+    const summaryDetails = document.getElementById('summaryDetails');
+    const savePdfBtn = document.getElementById('savePdfBtn');
+    const doneBtn = document.getElementById('doneBtn');
+    const resultsModal = document.getElementById('resultsModal');
+    const resultClass = document.getElementById('resultClass');
+    const resultDivision = document.getElementById('resultDivision');
+    const resultGender = document.getElementById('resultGender');
+    const resultEvent = document.getElementById('resultEvent');
+    const resultCategoryFilter = document.getElementById('resultCategoryFilter');
+    const finalistsList = document.getElementById('finalistsList');
+    const resultDetails = document.getElementById('resultDetails');
+    const resultCancelBtn = document.getElementById('resultCancelBtn');
+    const resultSaveBtn = document.getElementById('resultSaveBtn');
+    const manageResultsBtn = document.getElementById('manageResultsBtn');
+    const downloadResultsBtn = document.getElementById('downloadResultsBtn');
+    const toggleBtn = document.getElementById('toggleRegistrationBtn');
+    const submitBtn = sportsForm.querySelector('button[type="submit"]');
+    const resultCategoryFilter = document.getElementById('resultCategoryFilter');
+
+
+    let allRegistrations = [];
+    let filteredRegistrations = [];
+    let allResults = [];
+    let lastSubmittedData = null;
+    let registrationOpen = true;
+
+    // --- Timer Variables and Logic ---
+    const TIME_LIMIT_MINUTES = 10; // 👈 You can change the time limit here!
+    let timeRemaining = TIME_LIMIT_MINUTES * 60; // seconds
+
+// --- START OF DEADLINE TIMER CODE (Counting down to Nov 3) ---
+
+// Set the deadline to November 3rd, 2025 at midnight (23:59:59)
+const REGISTRATION_DEADLINE = new Date("November 3, 2025 23:59:59").getTime();
+
+// 1. Create a display element and append it to the body (outside the main card)
+const timerDisplay = document.createElement('div');
+timerDisplay.id = 'timerDisplay';
+timerDisplay.className = 'fixed top-0 left-1/2 transform -translate-x-1/2 mt-3 p-2 px-4 bg-yellow-400 text-gray-900 font-bold rounded-lg shadow-xl z-50 transition-all duration-300';
+document.body.appendChild(timerDisplay);
+
+toggleBtn.addEventListener('click', () => {
+    if (registrationOpen) {
+        registrationOpen = false;
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Registration Closed';
+        toggleBtn.innerText = 'Open Registration';
+    } else {
+        registrationOpen = true;
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Submit';
+        toggleBtn.innerText = 'Close Registration';
+    }
+});
+
+const clearBtn = document.getElementById("clearAllBtn");
+
+clearBtn.addEventListener("click", async () => {
+    const adminKey = prompt("Enter admin key to clear all registrations:");
+    if (adminKey !== "sunrise2025") {
+        alert("❌ Wrong admin key. Access denied.");
+        return;
+    }
+
+    const confirmClear = confirm("⚠️ This will permanently delete ALL registrations. Are you sure?");
+    if (!confirmClear) return;
+
+    try {
+        const colRef = collection(db, "registrations");
+        const snapshot = await getDocs(colRef);
+
+        const deletePromises = [];
+        snapshot.forEach(docSnap => {
+            deletePromises.push(deleteDoc(doc(db, "registrations", docSnap.id)));
+        });
+
+        await Promise.all(deletePromises);
+        showMessageBox("✅ All registrations cleared successfully!", "success");
+
+        // Clear local arrays too
+        allRegistrations = [];
+        filteredRegistrations = [];
+        allResults = [];
+
+    } catch (err) {
+        console.error(err);
+        showMessageBox("❌ Failed to clear registrations. See console.", "error");
+    }
+});
+
+function filterResults() {
+    const classValue = resultClass.value;
+    const divisionValue = resultDivision.value;
+    const genderValue = resultGender.value;
+    const eventValue = resultEvent.value;
+    const categoryValue = resultCategoryFilter.value;
+    const searchValue = resultsSearch.value.toLowerCase();
+
+    const filtered = allResults.filter(res => {
+        return (!classValue || res.class == classValue)
+            && (!divisionValue || res.division == divisionValue)
+            && (!genderValue || res.gender == genderValue)
+            && (!eventValue || res.event == eventValue)
+            && (!categoryValue || res.category == categoryValue)
+            && (res.name.toLowerCase().includes(searchValue)
+                || res.class.includes(searchValue)
+                || res.division.includes(searchValue)
+                || res.event.toLowerCase().includes(searchValue)
+                || res.house.toLowerCase().includes(searchValue));
+    });
+
+    displayResults(filtered); // your existing function that shows results
+}
+
+function formatTime(diff) {
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    return `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+}
+
+function updateTimer() {
+    const now = new Date().getTime();
+    const distance = REGISTRATION_DEADLINE - now;
+
+    if (distance < 0) {
+        clearInterval(timerInterval);
+        timerDisplay.textContent = "REGISTRATION CLOSED!";
+        timerDisplay.classList.remove('bg-yellow-400', 'text-gray-900', 'bg-red-500', 'text-white');
+        timerDisplay.classList.add('bg-red-600', 'text-white', 'animate-shake');
+
+        // Disable the form if it exists
+        const sportsForm = document.getElementById('sportsForm');
+        if (sportsForm) {
+            sportsForm.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+        }
+
+        if (typeof showMessageBox === "function") {
+            showMessageBox("The registration deadline has passed.", 'error');
+        }
+
+        return;
+    }
+
+    // Change color when less than 24 hours remain
+    if (distance < 86400000) {
+        timerDisplay.classList.remove('bg-yellow-400', 'text-gray-900');
+        timerDisplay.classList.add('bg-red-500', 'text-white');
+    }
+
+    timerDisplay.textContent = `Deadline: ${formatTime(distance)} Left`;
+}
+
+// 2. Start the timer when the script runs
+const timerInterval = setInterval(updateTimer, 1000);
+updateTimer(); // Run once immediately
+
+// --- END OF DEADLINE TIMER CODE ---
+
+    function showMessageBox(message, type) {
+        messageBox.textContent = message;
+        messageBox.classList.remove('hidden', 'bg-red-500', 'bg-green-500', 'animate-shake');
+        if (type === 'success') {
+            messageBox.classList.add('bg-green-500');
+        } else {
+            messageBox.classList.add('bg-red-500', 'animate-shake');
+        }
+        setTimeout(() => {
+            messageBox.classList.add('hidden');
+            messageBox.classList.remove('animate-shake');
+        }, 4000);
+    }
+
+    function showConfirmationModal(title, message, onConfirm, confirmText = 'Confirm', confirmColor = 'bg-red-600') {
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modalConfirmBtn.textContent = confirmText;
+        modalConfirmBtn.classList.remove('bg-red-600', 'bg-red-700', 'bg-blue-600', 'bg-blue-700', 'bg-green-600', 'bg-green-700');
+        if (confirmColor.includes('red')) {
+            modalConfirmBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        } else if (confirmColor.includes('blue')) {
+            modalConfirmBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        } else if (confirmColor.includes('green')) {
+            modalConfirmBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+        }
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modalConfirmBtn.onclick = null;
+        modalCancelBtn.onclick = null;
+        modalConfirmBtn.onclick = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            onConfirm();
+        };
+        modalCancelBtn.onclick = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+    }
+
+    function calculateCategory(dobString) {
+        if (!dobString) return '';
+        const dobYear = parseInt(dobString.split('-')[0]);
+        const currentYear = 2025; // Current year as per the date
+        if (dobYear < MIN_YEAR || dobYear > MAX_YEAR) {
+            return 'ineligible';
+        }
+        if (dobString >= CUTOFF_2017) return "Sub Junior";
+        else if (dobString >= CUTOFF_2015 && dobString < CUTOFF_2017) return "Junior";
+        else if (dobString >= CUTOFF_2013 && dobString < CUTOFF_2015) return "Inter";
+        else if (dobString >= CUTOFF_2010 && dobString < CUTOFF_2013) return "Senior";
+        else if (dobString < CUTOFF_2010) return "Super Senior";
+        return "";
+    }
+
+    function calculateGenderStats() {
+    let boyCount = 0;
+    let girlCount = 0;
+
+    // This iterates through your list of all registrations
+    for (const registration of allRegistrations) {
+        // ASSUMES the gender field is named 'gender' in your Firebase documents
+        const gender = registration.gender ? registration.gender.toLowerCase() : '';
+        if (gender === 'boy') {
+            boyCount++;
+        } else if (gender === 'girl') {
+            girlCount++;
+        }
+    }
+
+    // Updates the HTML elements you just added
+    document.getElementById('boyCount').textContent = boyCount;
+    document.getElementById('girlCount').textContent = girlCount;
+}
+
+    function renderEvents(category, selectedEvents = []) {
+        const categoryData = SPORTS_EVENTS[category];
+        eventList.innerHTML = '';
+        if (!categoryData) {
+            eventsSection.classList.add('hidden');
+            return;
+        }
+        const maxEvents = categoryData.maxEvents;
+        const events = categoryData.events;
+        eventList.dataset.maxEvents = maxEvents;
+        eventsSection.classList.remove('hidden');
+        eventNote.textContent = `Please select up to ${maxEvents} events for the ${category} category.`;
+        events.forEach(event => {
+            const isChecked = selectedEvents.includes(event);
+            const eventId = `event-${category}-${event.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            const wrapper = document.createElement('div');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = eventId;
+            checkbox.name = 'events';
+            checkbox.value = event;
+            checkbox.checked = isChecked;
+            checkbox.className = 'event-checkbox hidden';
+            const label = document.createElement('label');
+            label.htmlFor = eventId;
+            label.className = 'text-gray-700 block cursor-pointer p-3 bg-white border border-gray-300 rounded-xl shadow-sm text-center transition duration-150 select-none';
+            label.textContent = event;
+            if (isChecked) {
+                label.classList.add('bg-blue-600', 'text-white', 'border-blue-700', 'ring-2', 'ring-blue-700', 'font-bold', 'shadow-lg');
+            }
+            label.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isCurrentlyChecked = checkbox.checked;
+                const checkedCount = eventList.querySelectorAll('.event-checkbox:checked').length;
+                if (!isCurrentlyChecked && checkedCount >= maxEvents) {
+                    showMessageBox(`You can only select up to ${maxEvents} events for this category.`, 'error');
+                    label.classList.add('animate-shake');
+                    setTimeout(() => label.classList.remove('animate-shake'), 500);
+                    return;
+                }
+                checkbox.checked = !isCurrentlyChecked;
+                if (checkbox.checked) {
+                    label.classList.add('bg-blue-600', 'text-white', 'border-blue-700', 'ring-2', 'ring-blue-700', 'font-bold', 'shadow-lg');
+                    label.classList.remove('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-50');
+                } else {
+                    label.classList.remove('bg-blue-600', 'text-white', 'border-blue-700', 'ring-2', 'ring-blue-700', 'font-bold', 'shadow-lg');
+                    label.classList.add('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-50');
+                }
+                label.classList.add('transition', 'transform', 'duration-200', 'ease-out');
+                label.style.transform = isCurrentlyChecked ? 'scale(1)' : 'scale(1.05)';
+                setTimeout(() => label.style.transform = 'scale(1)', 200);
+            });
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            eventList.appendChild(wrapper);
+        });
+    }
+
+    async function toggleFinalistStatus(docId, currentStatus) {
+        if (!isDatabaseReady) {
+            showMessageBox('Database is not initialized. Registration failed.', 'error');
+            return;
+        }
+        try {
+            const regRef = doc(db, COLLECTION_PATH, docId);
+            await setDoc(regRef, { isFinalist: !currentStatus }, { merge: true });
+            showMessageBox(`Status updated: ${!currentStatus ? 'Selected for Finals' : 'Removed from Finals'}`, 'success');
+        } catch (e) {
+            console.error("Error updating finalist status: ", e);
+            showMessageBox('Failed to update finalist status.', 'error');
+        }
+    }
+
+    async function saveRegistration(data, docId = null) {
+    if (!isDatabaseReady) {
+        showMessageBox('Database is not initialized. Registration failed.', 'error');
+        return;
+    }
+
+    try {
+        if (docId) {
+            await setDoc(doc(db, COLLECTION_PATH, docId), data);
+            showMessageBox('Registration updated successfully!', 'success');
+        } else {
+            const normalizedName = data.name.toLowerCase().trim();
+            const existingGrNo = allRegistrations.find(reg => reg.grNo === data.grNo);
+            if (existingGrNo) {
+                showMessageBox(`Error: The GR Number ${data.grNo} is already registered by ${existingGrNo.name}. Only one submission is allowed per student.`, 'error');
+                return;
+            }
+            const existingName = allRegistrations.find(reg => reg.name.toLowerCase().trim() === normalizedName);
+            if (existingName) {
+                showMessageBox(`Error: The name "${data.name}" is already registered. Only one submission is allowed per student.`, 'error');
+                return;
+            }
+
+            await addDoc(collection(db, COLLECTION_PATH), data);
+            showMessageBox('Registration submitted successfully!', 'success');
+            lastSubmittedData = data;
+
+            // --- START: FIXED AUTO-DOWNLOAD CODE (works on iPhone too) ---
+            renderSummary(lastSubmittedData);        // 1. Render the summary
+            toggleView('summary');                   // 2. Show summary section
+            await new Promise(r => setTimeout(r, 500)); // 3. Wait a moment for UI to render
+
+            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
+            if (isIOS) {
+                // ✅ For iPhone/iPad – open summary in new tab
+                const summaryHtml = document.querySelector('#summarySection').outerHTML;
+                const newTab = window.open('', '_blank');
+                newTab.document.write(`
+                    <html>
+                        <head>
+                            <title>Registration Summary</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; padding: 16px; }
+                            </style>
+                        </head>
+                        <body>${summaryHtml}</body>
+                    </html>
+                `);
+                newTab.document.close();
+                showMessageBox('Your summary opened in a new tab — use Share → Save to Files to save it as PDF.', 'info');
+            } else {
+                // ✅ For desktop / Android browsers – auto print
+                window.print();
+            }
+            // --- END: FIXED AUTO-DOWNLOAD CODE ---
+        }
+    } catch (e) {
+        console.error("Error saving document: ", e);
+        showMessageBox('An error occurred during submission. Check console for details.', 'error');
+    }
+}
+
+
+    async function deleteRegistration(docId) {
+        if (!isDatabaseReady) {
+            showMessageBox('Database is not initialized. Deletion failed.', 'error');
+            return;
+        }
+        try {
+            await deleteDoc(doc(db, COLLECTION_PATH, docId));
+            showMessageBox('Registration deleted successfully.', 'success');
+        } catch (e) {
+            console.error("Error deleting document: ", e);
+            showMessageBox('Failed to delete registration.', 'error');
+        }
+    }
+
+    async function saveResults(data) {
+        if (!isDatabaseReady) {
+            showMessageBox('Database is not initialized. Results save failed.', 'error');
+            return;
+        }
+        try {
+            const key = `${data.classVal}-${data.division}-${data.gender}-${data.event}`;
+            await setDoc(doc(db, RESULTS_COLLECTION_PATH, key), data);
+            showMessageBox('Results saved successfully!', 'success');
+            closeResultsModal();
+        } catch (e) {
+            console.error("Error saving results: ", e);
+            showMessageBox('Failed to save results.', 'error');
+        }
+    }
+
+    function populateFilters(registrations) {
+        const availableClasses = new Set();
+        const availableEvents = new Set();
+        const availableCategories = new Set(Object.keys(SPORTS_EVENTS));
+        const availableDivisions = new Set();
+        const availableGenders = new Set();
+        registrations.forEach(reg => {
+            if (reg.class) availableClasses.add(reg.class);
+            reg.events.forEach(event => availableEvents.add(event));
+            if (reg.division) availableDivisions.add(reg.division);
+            if (reg.gender) availableGenders.add(reg.gender);
+        });
+        const populateSelect = (selectEl, values) => {
+            const currentSelected = selectEl.value;
+            selectEl.innerHTML = selectEl.querySelector('option[value=""]') ? '<option value="">' + selectEl.querySelector('option[value=""]').textContent + '</option>' : '<option value="">All</option>';
+            const sortedValues = Array.from(values).sort((a, b) => (selectEl.id === 'filterClass' ? parseInt(a) - parseInt(b) : a.localeCompare(b)));
+            sortedValues.forEach(value => {
+                if (value) {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    if (value === currentSelected) option.selected = true;
+                    selectEl.appendChild(option);
+                }
+            });
+        };
+        populateSelect(filterClass, availableClasses);
+        populateSelect(filterCategory, availableCategories);
+        populateSelect(filterEvent, availableEvents);
+        populateSelect(filterDivision, availableDivisions);
+        populateSelect(filterGender, availableGenders);
+    }
+
+    function filterAdminData() {
+        const searchTerm = adminSearch.value.toLowerCase().trim();
+        const selectedCategory = filterCategory.value;
+        const selectedClass = filterClass.value;
+        const selectedEvent = filterEvent.value;
+        const selectedDivision = filterDivision.value;
+        const selectedGender = filterGender.value;
+        filteredRegistrations = allRegistrations.filter(reg => {
+            const textMatch = !searchTerm || reg.name.toLowerCase().includes(searchTerm) || reg.grNo.includes(searchTerm);
+            const categoryMatch = !selectedCategory || reg.category === selectedCategory;
+            const classMatch = !selectedClass || reg.class === selectedClass;
+            const eventMatch = !selectedEvent || reg.events.includes(selectedEvent);
+            const divisionMatch = !selectedDivision || reg.division === selectedDivision;
+            const genderMatch = !selectedGender || reg.gender === selectedGender;
+            return textMatch && categoryMatch && classMatch && eventMatch && divisionMatch && genderMatch;
+        });
+        renderAdminTable(filteredRegistrations);
+    }
+
+    function renderAdminTable(registrations) {
+        adminTableBody.innerHTML = '';
+        totalRegistrations.textContent = `Total: ${registrations.length}`;
+        if (registrations.length === 0) {
+            adminTableBody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-gray-500">No registrations found matching the current filters.</td></tr>';
+            return;
+        }
+        registrations.forEach(reg => {
+            const isFinalist = reg.isFinalist || false;
+            const row = adminTableBody.insertRow();
+            row.id = `reg-${reg.id}`;
+            row.innerHTML = `
+                <td>${reg.name}</td>
+                <td>${reg.grNo}</td>
+                <td>${reg.class}-${reg.division}</td>
+                <td>${reg.gender}</td>
+                <td>${reg.house}</td>
+                <td>${reg.category}</td>
+                <td>${reg.events.join(', ')}</td>
+                <td class="text-center">
+                    <button data-id="${reg.id}" data-status="${isFinalist}" class="finalist-toggle-btn text-sm font-medium transition duration-150 rounded-full px-3 py-1 ${isFinalist ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}">
+                        ${isFinalist ? 'Finalist' : 'Select'}
+                    </button>
+                </td>
+                <td class="whitespace-nowrap space-x-2">
+                    <button data-id="${reg.id}" class="edit-btn text-sm font-medium text-blue-600 hover:text-blue-800 transition">Edit</button>
+                    <button data-id="${reg.id}" class="delete-btn text-sm font-medium text-red-600 hover:text-red-800 transition">Delete</button>
+                </td>
+            `;
+        });
+        adminTableBody.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', (e) => startEdit(e.target.dataset.id));
+        });
+        adminTableBody.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const docId = e.target.dataset.id;
+                const reg = allRegistrations.find(r => r.id === docId);
+                if (reg) {
+                    showConfirmationModal(
+                        'Confirm Deletion',
+                        `Are you sure you want to delete the registration for ${reg.name} (GR No: ${reg.grNo})?`,
+                        () => deleteRegistration(docId)
+                    );
+                }
+            });
+        });
+        adminTableBody.querySelectorAll('.finalist-toggle-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const docId = e.target.dataset.id;
+                const currentStatus = e.target.dataset.status === 'true';
+                toggleFinalistStatus(docId, currentStatus);
+            });
+        });
+    }
+
+    function startEdit(docId) {
+        const reg = allRegistrations.find(r => r.id === docId);
+        if (!reg) return;
+        toggleView('form');
+        document.getElementById('name').value = reg.name;
+        document.getElementById('grNo').value = reg.grNo;
+        document.getElementById('class').value = reg.class;
+        document.getElementById('division').value = reg.division;
+        document.getElementById('gender').value = reg.gender;
+        document.getElementById('house').value = reg.house;
+        document.getElementById('dob').value = reg.dob;
+        document.getElementById('category').value = reg.category;
+        renderEvents(reg.category, reg.events);
+        const submitBtn = sportsForm.querySelector('button[type="submit"]');
+        submitBtn.textContent = 'Update Registration (Admin)';
+        submitBtn.dataset.editingId = docId;
+        showMessageBox(`Admin: Editing registration for ${reg.name}.`, 'success');
+    }
+
+    function toggleView(view) {
+    mainContainer.classList.add('hidden');
+    adminPanel.classList.add('hidden');
+    printArea.classList.add('hidden');
+    adminBtn.classList.remove('hidden');
+    
+    // Admin Block (Removed 'calculateGenderStats()')
+    if (view === 'admin') {
+        adminPanel.classList.remove('hidden');
+        adminBtn.textContent = 'Back to Registration';
+        adminBtn.classList.replace('bg-red-500', 'bg-blue-500');
+        adminBtn.classList.replace('hover:bg-red-600', 'hover:bg-blue-600');
+        filterAdminData();
+        calculateGenderStats();
+    } else if (view === 'form') {
+        mainContainer.classList.remove('hidden');
+        adminBtn.textContent = 'Admin Panel';
+        adminBtn.classList.replace('bg-blue-500', 'bg-red-500');
+        adminBtn.classList.replace('hover:bg-blue-600', 'hover:bg-red-600');
+        const isEditing = sportsForm.querySelector('button[type="submit"]').dataset.editingId;
+        if (lastSubmittedData && !isEditing) {
+            sportsForm.classList.add('hidden');
+            submissionCompleteMessage.classList.remove('hidden');
+        } else {
+            sportsForm.classList.remove('hidden');
+            submissionCompleteMessage.classList.add('hidden');
+            sportsForm.reset();
+            categoryInput.value = '';
+            eventsSection.classList.add('hidden');
+            const submitBtn = sportsForm.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Submit Registration';
+            delete submitBtn.dataset.editingId;
+            if (!isDatabaseReady) submitBtn.disabled = true;
+            else submitBtn.disabled = false;
+        }
+    // Summary Block (Re-added 'renderSummary(lastSubmittedData);')
+    } else if (view === 'summary') {
+        mainContainer.classList.add('hidden');
+        adminPanel.classList.add('hidden');
+        adminBtn.classList.add('hidden');
+        printArea.classList.remove('hidden');
+        renderSummary(lastSubmittedData); // <-- RE-ADDED LINE
+    }
+}
+
+    function renderSummary(data) {
+    if (!data) return;
+    const numEvents = data.events.length; // Use the actual number of selected events
+    const headerHtml = `
+        <header class="mb-4 flex items-center justify-center">
+            <img src="images/sunrise-school-logo.png" alt="Sunrise English Private School Logo" style="width: 600px; height: auto; margin-right: 10px;">
+        </header>
+    `;
+    const greetingsHtml = `
+        <p>Dear Parents,</p>
+        <p>Greetings!</p>
+        <p>We are pleased to inform you that the Annual Sports Meet for Boys and Girls will be held at Zayed Sports City, Abu Dhabi on the following dates:</p>
+        <ul class="list-disc ml-4">
+            <li>26th & 27th November 2025 (Wednesday & Thursday)</li>
+            <li>8th December 2025 (Monday)</li>
+        </ul>
+    `;
+    const noteHtml = `
+        <p><strong>Please Note:</strong></p>
+        <ul class="list-disc ml-4">
+            <li>House-wise Relay (4x100 meters): This event will be held for Inter, Senior, and Super Senior categories only.</li>
+            <li>Track Event Selection: Athletes will be selected based on their timing performance.</li>
+            <li>Selection Process for Track Events:</li>
+            <ul class="list-circle ml-6">
+                <li>A time trial will be conducted.</li>
+                <li>The top 8 athletes with the best times will qualify for the finals.</li>
+            </ul>
+            <li>Selection for Long Jump and Shot Put: Based on the distance achieved by the athletes.</li>
+            <li>Entry Submission: All entries must be submitted on or before 31th October 2025</li>
+        </ul>
+        <p><strong>PRINCIPAL.</strong></p>
+    `;
+    const studentDetailsHtml = `
+        <p>Full name of the student: <span class="underline" style="min-width: 200px;">${data.name}</span> GR NO: <span class="underline" style="min-width: 50px;">${data.grNo}</span></p>
+        <p>Class: <span class="underline" style="min-width: 50px;">${data.class}</span> Division: <span class="underline" style="min-width: 50px;">${data.division}</span> Sports House: <span class="underline" style="min-width: 150px;">${data.house}</span></p>
+        <p>Date of Birth (As per school record): <span class="underline" style="min-width: 100px;">${data.dob}</span></p>
+    `;
+    const eventsHtml = `
+        <p>My ward will participate in the following events for the Annual Sports Meet</p>
+        <ol class="list-decimal ml-4">
+            ${data.events.map((event, index) => `<li>${event}</li>`).join('')}
+            ${Array(Math.max(0, 3 - numEvents)).map(() => '<li></li>').join('')}
+        </ol>
+    `;
+    const signatureHtml = `
+        <p>Parent signature <span class="underline" style="min-width: 200px;"></span></p>
+    `;
+    summaryTitle.textContent = '';
+    summaryDetails.innerHTML = headerHtml + greetingsHtml + noteHtml + studentDetailsHtml + eventsHtml + signatureHtml;
+}
+
+    function downloadXLSX(data, filename = "sports_registrations_filtered.xlsx") {
+    if (data.length === 0) {
+        showMessageBox('No data to download. Please ensure your filters return results.', 'error');
+        return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    // ✅ Get filters
+    const filters = {
+        class: document.getElementById('filterClass')?.value || "",
+        division: document.getElementById('filterDivision')?.value || "",
+        gender: document.getElementById('filterGender')?.value || "",
+        event: document.getElementById('filterEvent')?.value || ""
+    };
+
+    // ✅ Build filter line dynamically
+    let filterLine = [];
+    if (filters.event) filterLine.push(`Event: ${filters.event}`);
+    if (filters.class) filterLine.push(`Class: ${filters.class} ${filters.division || ""}`.trim());
+    if (filters.gender) filterLine.push(`Gender: ${filters.gender}`);
+    if (filterLine.length === 0) filterLine.push("All Registrations");
+
+    function formatDateDMY(dateStr) {
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
+    const headers = ["Sr.No", "GR No", "Full Name", "Class & Division", "House", "DOB", "Events", "Results"];
+    const worksheetData = [];
+
+    worksheetData.push(["Sunrise English Private School, L.L.C, O.P.C, Mussafah, Abu Dhabi"]);
+    worksheetData.push([filterLine.join(" | ")]);
+    worksheetData.push([]);
+    worksheetData.push(headers);
+
+    data.forEach((reg, i) => {
+        worksheetData.push([
+            i + 1,
+            reg.grNo,
+            reg.name,
+            `${reg.class}-${reg.division}`,
+            reg.house,
+            formatDateDMY(reg.dob),
+            reg.events.join(", "),
+            "" // Results column empty for admin to fill
+        ]);
+    });
+
+    const sheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+    // Merge first row (school name) across all columns
+    sheet['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }
+    ];
+
+    // Center the school name
+    const cell = sheet["A1"];
+    if (cell) {
+        cell.s = {
+            alignment: { horizontal: "center", vertical: "center" },
+            font: { bold: true, sz: 14 }
+        };
+    }
+
+    // AUTO-FIT columns
+    const colWidths = worksheetData[3].map((_, colIndex) => {
+        let maxLength = 10;
+        worksheetData.forEach(row => {
+            if (row[colIndex]) {
+                const cellLength = row[colIndex].toString().length;
+                if (cellLength > maxLength) maxLength = cellLength;
+            }
+        });
+        return { wch: maxLength + 2 };
+    });
+    sheet['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(workbook, sheet, "Registrations");
+    XLSX.writeFile(workbook, filename);
+    showMessageBox(`Downloaded ${data.length} registrations successfully!`, 'success');
+}
+
+
+
+    function downloadResultsXLSX() {
+    if (allResults.length === 0) {
+        showMessageBox('No results to download.', 'error');
+        return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+
+    const filters = {
+        class: document.getElementById('resultClassFilter')?.value || "",
+        division: document.getElementById('resultDivisionFilter')?.value || "",
+        gender: document.getElementById('resultGenderFilter')?.value || "",
+        event: document.getElementById('resultEventFilter')?.value || ""
+    };
+
+    let filterLine = [];
+    if (filters.event) filterLine.push(`Event: ${filters.event}`);
+    if (filters.class) filterLine.push(`Class: ${filters.class} ${filters.division || ""}`.trim());
+    if (filters.gender) filterLine.push(`Gender: ${filters.gender}`);
+    if (filterLine.length === 0) filterLine.push("All Results");
+
+    function formatDateDMY(dateStr) {
+        const d = new Date(dateStr);
+        if (isNaN(d)) return dateStr;
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
+    allResults.forEach((res, index) => {
+        // EXACT match filtering: only include the selected event if chosen
+        if ((filters.class && res.classVal !== filters.class) ||
+            (filters.division && res.division !== filters.division) ||
+            (filters.event && res.event.trim() !== filters.event.trim()) ||
+            (filters.gender && res.gender !== filters.gender)) return;
+
+        const headers = ["Sr.No", "GR No", "Full Name", "Class & Division", "House", "DOB", "Events", "Results"];
+        const worksheetData = [];
+
+        // Top rows: School + Event title + Filter line + Headers
+        worksheetData.push(["Sunrise English Private School, L.L.C, O.P.C, Mussafah, Abu Dhabi"]);
+        worksheetData.push(["Annual Sports Meet 2025-26"]);
+        worksheetData.push([filterLine.join(" | ")]);
+        worksheetData.push(headers);
+
+        const students = allRegistrations.filter(stu =>
+            stu.class === res.classVal &&
+            stu.division === res.division &&
+            stu.gender === res.gender &&
+            (!filters.event || stu.events.includes(filters.event))
+        );
+
+        students.forEach((stu, i) => {
+            worksheetData.push([
+                i + 1,
+                stu.grNo,
+                stu.name,
+                `${stu.class}-${stu.division}`,
+                stu.house,
+                formatDateDMY(stu.dob),
+                stu.events.join(", "),
+                "" // Result column empty for admin to fill
+            ]);
+        });
+
+        const sheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+        // Merge first two rows across all columns
+        sheet['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } }
+        ];
+
+        // Center the top two rows
+        ["A1", "A2"].forEach(cellAddress => {
+            const cell = sheet[cellAddress];
+            if (cell) {
+                cell.s = {
+                    alignment: { horizontal: "center", vertical: "center" },
+                    font: { bold: true, sz: 14 }
+                };
+            }
+        });
+
+        // AUTO-FIT columns based on content length
+        const colWidths = worksheetData[3].map((_, colIndex) => {
+            let maxLength = 10;
+            worksheetData.forEach(row => {
+                if (row[colIndex]) {
+                    const cellLength = row[colIndex].toString().length;
+                    if (cellLength > maxLength) maxLength = cellLength;
+                }
+            });
+            return { wch: maxLength + 2 };
+        });
+        sheet['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(workbook, sheet, `${res.event ? res.event.slice(0, 25) : 'AllResults'}_${index + 1}`);
+    });
+
+    XLSX.writeFile(workbook, "sports_results_filtered.xlsx");
+    showMessageBox('Downloaded formatted results Excel successfully!', 'success');
+}
+
+
+
+
+
+    function openAdminLoginModal() {
+        adminPasswordInput.value = '';
+        passwordError.classList.add('hidden');
+        adminLoginModal.classList.remove('hidden');
+        adminLoginModal.classList.add('flex');
+        adminPasswordInput.focus();
+    }
+
+    function closeAdminLoginModal() {
+        adminLoginModal.classList.add('hidden');
+        adminLoginModal.classList.remove('flex');
+    }
+
+    function handleAdminLogin() {
+        const enteredPassword = adminPasswordInput.value.trim();
+        if (enteredPassword === ADMIN_PASSWORD) {
+            closeAdminLoginModal();
+            toggleView('admin');
+            adminPasswordInput.value = '';
+        } else {
+            passwordError.classList.remove('hidden');
+            adminPasswordInput.classList.add('animate-shake');
+            setTimeout(() => adminPasswordInput.classList.remove('animate-shake'), 500);
+            showMessageBox('Login failed. Incorrect password.', 'error');
+        }
+    }
+
+    function openResultsModal() {
+    finalistsList.classList.add('hidden');
+    finalistsList.innerHTML = '';
+    generateAllFinalists();
+    resultsModal.classList.remove('hidden');
+    resultsModal.classList.add('flex');
+}
+
+    function closeResultsModal() {
+        resultsModal.classList.add('hidden');
+        resultsModal.classList.remove('flex');
+    }
+
+    function generateAllFinalists() {
+    const genders = ['Boy', 'Girl'];
+    const classes = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    const divisions = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+    
+    // Populate events dropdown
+    const resultEventFilter = document.getElementById('resultEventFilter');
+    resultEventFilter.innerHTML = '<option value="">All Events</option>';
+    const allEvents = new Set();
+    allRegistrations.forEach(reg => reg.events.forEach(ev => allEvents.add(ev)));
+    Array.from(allEvents).sort().forEach(ev => {
+        const option = document.createElement('option');
+        option.value = ev;
+        option.textContent = ev;
+        resultEventFilter.appendChild(option);
+    });
+
+    function updateFilteredList() {
+        const searchTerm = document.getElementById('resultsSearch').value.toLowerCase();
+        const classFilter = document.getElementById('resultClassFilter').value;
+        const divisionFilter = document.getElementById('resultDivisionFilter').value;
+        const genderFilter = document.getElementById('resultGenderFilter').value;
+        const eventFilter = document.getElementById('resultEventFilter').value;
+
+        let content = '';
+        genders.forEach(gender => {
+            if (genderFilter && gender !== genderFilter) return;
+            content += `<h4 class="text-xl font-bold mt-6">${gender}s</h4>`;
+            classes.forEach(classVal => {
+                if (classFilter && classVal !== classFilter) return;
+                const classId = `class-${gender}-${classVal}`;
+                content += `
+                    <div class="mt-4">
+                        <button type="button" class="toggle-class w-full text-left text-lg font-bold text-gray-900 flex items-center justify-between" data-target="${classId}">
+                            Class ${classVal}
+                            <svg class="w-5 h-5 transform transition-transform" data-target="${classId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div id="${classId}" class="class-content space-y-3 mt-2"></div>
+                    </div>
+                `;
+                divisions.forEach(division => {
+                    if (divisionFilter && division !== divisionFilter) return;
+                    const students = allRegistrations.filter(reg => 
+                        reg.class === classVal &&
+                        reg.division === division &&
+                        reg.gender === gender &&
+                        reg.isFinalist &&
+                        (!eventFilter || reg.events.includes(eventFilter)) &&
+                        (searchTerm === '' || 
+                            reg.name.toLowerCase().includes(searchTerm) ||
+                            classVal.toLowerCase().includes(searchTerm) ||
+                            division.toLowerCase().includes(searchTerm) ||
+                            reg.events.some(ev => ev.toLowerCase().includes(searchTerm)) ||
+                            reg.house.toLowerCase().includes(searchTerm))
+                    );
+                    if (students.length === 0) return;
+                    const divisionId = `division-${gender}-${classVal}-${division}`;
+                    let divisionContent = `
+                        <div class="ml-4">
+                            <button type="button" class="toggle-division w-full text-left text-md font-semibold text-gray-800 flex items-center justify-between" data-target="${divisionId}">
+                                Division ${division}
+                                <svg class="w-4 h-4 transform transition-transform" data-target="${divisionId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div id="${divisionId}" class="division-content space-y-2 mt-1">
+                    `;
+                    const eventsSet = new Set();
+                    students.forEach(stu => stu.events.forEach(ev => eventsSet.add(ev)));
+                    const events = Array.from(eventsSet).sort();
+                    events.forEach(eventVal => {
+                        if (eventFilter && eventVal !== eventFilter) return;
+                        divisionContent += `<p class="font-medium mt-2">${eventVal}</p>`;
+                        const finalists = students.filter(stu => stu.events.includes(eventVal));
+                        finalists.forEach((stu, index) => {
+                            divisionContent += `
+                                <div class="flex items-center space-x-4 mt-1">
+                                    <span class="w-1/3">${stu.name} (${stu.house})</span>
+                                    <input type="text" data-group="${classVal}-${division}-${gender}-${eventVal}" data-index="${index}" data-house="${stu.house}" class="app-input w-2/3 result-input" placeholder="Enter time/result">
+                                </div>
+                            `;
+                        });
+                    });
+                    divisionContent += `</div></div>`;
+                    content += divisionContent;
+                });
+            });
+        });
+        finalistsList.innerHTML = content;
+        finalistsList.classList.remove('hidden');
+
+        // Add event listeners for toggle buttons
+        document.querySelectorAll('.toggle-class').forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target;
+                const contentDiv = document.getElementById(targetId);
+                const svg = button.querySelector('svg');
+                if (contentDiv.classList.contains('hidden')) {
+                    contentDiv.classList.remove('hidden');
+                    svg.classList.add('rotate-180');
+                } else {
+                    contentDiv.classList.add('hidden');
+                    svg.classList.remove('rotate-180');
+                }
+            });
+        });
+        document.querySelectorAll('.toggle-division').forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target;
+                const contentDiv = document.getElementById(targetId);
+                const svg = button.querySelector('svg');
+                if (contentDiv.classList.contains('hidden')) {
+                    contentDiv.classList.remove('hidden');
+                    svg.classList.add('rotate-180');
+                } else {
+                    contentDiv.classList.add('hidden');
+                    svg.classList.remove('rotate-180');
+                }
+            });
+        });
+
+        // Initially collapse all divisions
+        document.querySelectorAll('.division-content').forEach(div => div.classList.add('hidden'));
+    }
+
+    // Initialize list and add event listeners for search and filters
+    updateFilteredList();
+    document.getElementById('resultsSearch').addEventListener('input', updateFilteredList);
+    document.getElementById('resultClassFilter').addEventListener('change', updateFilteredList);
+    document.getElementById('resultDivisionFilter').addEventListener('change', updateFilteredList);
+    document.getElementById('resultGenderFilter').addEventListener('change', updateFilteredList);
+    document.getElementById('resultEventFilter').addEventListener('change', updateFilteredList);
+}
+
+    function initializeListeners() {
+        dobInput.addEventListener('change', () => {
+            const category = calculateCategory(dobInput.value);
+            if (category === 'ineligible') {
+                categoryInput.value = '';
+                showMessageBox('You are not eligible. Date of Birth must be between 2005 and 2018.', 'error');
+                eventsSection.classList.add('hidden');
+            } else if (category === '') {
+                categoryInput.value = '';
+                showMessageBox('Please enter a valid Date of Birth.', 'error');
+                eventsSection.classList.add('hidden');
+            } else {
+                categoryInput.value = category;
+                renderEvents(category);
+            }
+        });
+        sportsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const submitBtn = sportsForm.querySelector('button[type="submit"]');
+            const editingId = submitBtn.dataset.editingId;
+            const reg = editingId ? allRegistrations.find(r => r.id === editingId) : {};
+            const currentUserId = auth?.currentUser?.uid || ('anonymous_' + Math.random().toString(36).substring(2, 9));
+            const name = document.getElementById('name').value.trim();
+            const grNo = document.getElementById('grNo').value.trim();
+            const classVal = document.getElementById('class').value;
+            const division = document.getElementById('division').value;
+            const gender = document.getElementById('gender').value;
+            const house = document.getElementById('house').value;
+            const dob = dobInput.value;
+            const category = categoryInput.value;
+            const selectedEvents = Array.from(eventList.querySelectorAll('.event-checkbox:checked')).map(cb => cb.value);
+            if (!/^\d{3,5}$/.test(grNo)) {
+                showMessageBox('GR Number must be exactly 3-5 digits.', 'error');
+                return;
+            }
+            if (!category || category === 'ineligible') {
+                showMessageBox('Please enter a valid Date of Birth to determine the category.', 'error');
+                return;
+            }
+            if (selectedEvents.length === 0) {
+                showMessageBox('Please select at least one event.', 'error');
+                return;
+            }
+            const maxEventsAllowed = SPORTS_EVENTS[category]?.maxEvents || 0;
+            if (selectedEvents.length > maxEventsAllowed) {
+                showMessageBox(`Error: You selected ${selectedEvents.length} events, but the limit for ${category} is ${maxEventsAllowed}.`, 'error');
+                return;
+            }
+            const data = {
+                name,
+                grNo,
+                class: classVal,
+                division,
+                gender,
+                house,
+                dob,
+                category,
+                events: selectedEvents,
+                isFinalist: reg.isFinalist || false,
+                registeredBy: currentUserId,
+                timestamp: Date.now()
+            };
+            if (editingId) {
+                showConfirmationModal(
+                    'Confirm Update',
+                    `Are you sure you want to update the registration for ${name} (GR No: ${grNo})?`,
+                    () => saveRegistration(data, editingId),
+                    'Update',
+                    'bg-blue-600'
+                );
+            } else {
+                showConfirmationModal(
+                    'Confirm Registration',
+                    `Please confirm registration details for ${name}. You have selected ${selectedEvents.length} events.`,
+                    () => saveRegistration(data),
+                    'Submit',
+                    'bg-green-600'
+                );
+            }
+        });
+        adminBtn.addEventListener('click', () => {
+            const isCurrentlyAdmin = !adminPanel.classList.contains('hidden');
+            if (isCurrentlyAdmin) toggleView('form');
+            else openAdminLoginModal();
+        });
+        loginCancelBtn.addEventListener('click', closeAdminLoginModal);
+        loginSubmitBtn.addEventListener('click', handleAdminLogin);
+        adminPasswordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAdminLogin();
+            }
+        });
+        backToFormBtn.addEventListener('click', () => toggleView('form'));
+        adminSearch.addEventListener('input', filterAdminData);
+        filterCategory.addEventListener('change', filterAdminData);
+        filterClass.addEventListener('change', filterAdminData);
+        filterEvent.addEventListener('change', filterAdminData);
+        filterDivision.addEventListener('change', filterAdminData);
+        filterGender.addEventListener('change', filterAdminData);
+        clearFiltersBtn.addEventListener('click', () => {
+            adminSearch.value = '';
+            filterCategory.value = '';
+            filterClass.value = '';
+            filterEvent.value = '';
+            filterDivision.value = '';
+            filterGender.value = '';
+            filterAdminData();
+        });
+        downloadCsvBtn.addEventListener('click', () => {
+            downloadXLSX(filteredRegistrations, "sports_registrations_all.xlsx");
+        });
+        downloadFinalistsCsvBtn.addEventListener('click', () => {
+            const finalists = filteredRegistrations.filter(reg => reg.isFinalist);
+            downloadXLSX(finalists, "sports_registrations_finalists.xlsx");
+        });
+        savePdfBtn.addEventListener('click', () => {
+            window.print();
+        });
+        doneBtn.addEventListener('click', () => {
+            toggleView('form');
+        });
+        manageResultsBtn.addEventListener('click', openResultsModal);
+        resultCancelBtn.addEventListener('click', closeResultsModal);
+        resultSaveBtn.addEventListener('click', async () => {
+    const inputs = finalistsList.querySelectorAll('.result-input');
+    const groups = {};
+    inputs.forEach(input => {
+        if (input.value.trim()) {
+            const group = input.dataset.group;
+            const index = input.dataset.index;
+            const house = input.dataset.house;
+            if (!groups[group]) groups[group] = [];
+            groups[group].push({ index: parseInt(index), value: input.value.trim(), house });
+        }
+    });
+    if (Object.keys(groups).length === 0) {
+        showMessageBox('Please enter at least one result.', 'error');
+        return;
+    }
+    showConfirmationModal(
+        'Confirm Save',
+        'Are you sure you want to save all entered results?',
+        async () => {
+            try {
+                await Promise.all(Object.keys(groups).map(async (group) => {
+                    const [classVal, division, gender, eventVal] = group.split('-');
+                    const students = allRegistrations.filter(reg => 
+                        reg.class === classVal &&
+                        reg.division === division &&
+                        reg.gender === gender &&
+                        reg.isFinalist
+                    );
+                    const finalists = students.filter(stu => stu.events.includes(eventVal));
+                    let details = '';
+                    groups[group].sort((a, b) => a.index - b.index).forEach(entry => {
+                        const stu = finalists[entry.index];
+                        details += `${stu.name} (${stu.house}): ${entry.value}\n`;
+                    });
+                    const data = {
+                        classVal,
+                        division,
+                        gender,
+                        event: eventVal,
+                        details,
+                        timestamp: Date.now()
+                    };
+                    const key = group;
+                    await setDoc(doc(db, RESULTS_COLLECTION_PATH, key), data);
+                }));
+                showMessageBox('All results saved successfully!', 'success');
+                closeResultsModal();
+            } catch (e) {
+                console.error("Error saving results: ", e);
+                showMessageBox('Failed to save some results.', 'error');
+            }
+        },
+        'Save',
+        'bg-green-600'
+    );
+});
+        downloadResultsBtn.addEventListener('click', downloadResultsXLSX);
+    }
+
+    window.onload = function() {
+        initializeListeners();
+        const submitBtn = sportsForm.querySelector('button[type="submit"]');
+        let userId;
+
+        if (isDatabaseReady) {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    const regQ = query(collection(db, COLLECTION_PATH));
+                    onSnapshot(regQ, (snapshot) => {
+                        allRegistrations = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            isFinalist: doc.data().isFinalist || false,
+                            ...doc.data()
+                        }));
+                        populateFilters(allRegistrations);
+                        filterAdminData();
+                    }, (error) => {
+                        console.error("Firestore error:", error);
+                        adminTableBody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-red-500">Error loading data. Check console.</td></tr>';
+                    });
+                    const resultsQ = query(collection(db, RESULTS_COLLECTION_PATH));
+                    onSnapshot(resultsQ, (snapshot) => {
+                        allResults = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                    }, (error) => {
+                        console.error("Firestore results error:", error);
+                    });
+                } else {
+                    let attempt = 0;
+                    const maxAttempts = 2;
+                    while (attempt < maxAttempts) {
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                            console.log("Authenticated successfully.");
+                            break;
+                        } catch (error) {
+                            attempt++;
+                            console.error(`Authentication attempt ${attempt} failed:`, error.message, error.code);
+                            showMessageBox(`Authentication attempt ${attempt} failed: ${error.message}. Retrying...`, 'error');
+                            if (attempt === maxAttempts) {
+                                showMessageBox(`Authentication failed after ${maxAttempts} attempts: ${error.message}. Check Firebase configuration or enable anonymous sign-in.`, 'error');
+                                submitBtn.disabled = true;
+                                adminBtn.disabled = true;
+                            }
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    }
+                }
+            }, (error) => {
+                console.error("Auth state change error:", error);
+                showMessageBox(`Auth state error: ${error.message}. Check Firebase setup.`, 'error');
+                submitBtn.disabled = true;
+                adminBtn.disabled = true;
+            });
+        } else {
+            console.error("Firebase is not configured or failed to initialize. Database operations are disabled.");
+            showMessageBox('App Offline: Database configuration is missing or invalid. Submissions are disabled.', 'error');
+            submitBtn.disabled = true;
+            adminBtn.disabled = true;
+        }
+
+        toggleView('form');
+    };
+
+// --- "Forgot to Download?" (Always Visible) ---
+const grInput = document.getElementById('lookupGrNo');
+const downloadBtn = document.getElementById('downloadByGrBtn');
+
+downloadBtn.addEventListener('click', () => {
+    const gr = grInput.value.trim();
+    if (!gr || !/^\d{3,5}$/.test(gr)) {
+        showMessageBox('Enter valid GR No (3-5 digits)', 'error');
+        return;
+    }
+    const reg = allRegistrations.find(r => r.grNo === gr);
+    if (!reg) {
+        showMessageBox('Not found: ' + gr, 'error');
+        return;
+    }
+    lastSubmittedData = reg;
+    renderSummary(reg);
+    toggleView('summary');
+    setTimeout(() => window.print(), 600);
+});
+
+// Enable when data loads
+onSnapshot(collection(db, COLLECTION_PATH), () => {
+    // Ready to search
+});
+
+// Show download box ONLY when on registration form
+function updateDownloadBoxVisibility() {
+    const isOnForm = !mainContainer.classList.contains('hidden') && 
+                     !submissionCompleteMessage.classList.contains('hidden') === false;
+    const downloadBox = document.getElementById('pdfDownloadSection');
+    if (isOnForm) {
+        downloadBox.style.display = 'block';
+    } else {
+        downloadBox.style.display = 'none';
+    }
+}
+
+// Call it whenever view changes
+const originalToggleView = toggleView;
+toggleView = function(view) {
+    originalToggleView(view);
+    updateDownloadBoxVisibility();
+};
+
+// Also call on page load
+updateDownloadBoxVisibility();
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+// 🔧 Your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyC-axJOwivMy-bGhNmVIHaXORcG90gLA9g",
+  authDomain: "registration-c78dc.firebaseapp.com",
+  projectId: "registration-c78dc",
+  storageBucket: "registration-c78dc.firebasestorage.app",
+  messagingSenderId: "368136278543",
+  appId: "1:368136278543:web:03a46a62d1095f40a0497a",
+  measurementId: "G-14V6C8VSCH"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+async function checkRegistrationStatus() {
+  // 🧠 Ask if user is admin (you can change this to a better system later)
+  const adminKey = prompt("Enter admin key (leave blank if you're a student):");
+  const isAdmin = adminKey === "sunrise2025"; // 🔑 change this password
+
+  const docRef = doc(db, "settings", "registration");
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    const isOpen = data.isOpen;
+
+    const formSection = document.getElementById("sportsForm");
+    const closedMessage = document.getElementById("registrationClosedMessage");
+
+    if (isAdmin) {
+      // Admin can always access
+      const inputs = formSection.querySelectorAll("input, select, button[type='submit']");
+      inputs.forEach(el => el.disabled = false);   // enable all inputs
+      closedMessage.classList.add("hidden");       // hide closed message
+      console.log("✅ Admin access granted");
+    } else if (isOpen) {
+      // Registration open for students
+      const inputs = formSection.querySelectorAll("input, select, button[type='submit']");
+      inputs.forEach(el => el.disabled = false);   // enable all inputs
+      closedMessage.classList.add("hidden");       // hide closed message
+    } else {
+      // Registration closed for students
+      const inputs = formSection.querySelectorAll("input, select, button[type='submit']");
+      inputs.forEach(el => el.disabled = true);    // disable all inputs
+      closedMessage.classList.remove("hidden");    // show closed message
+    }
+
+  } else {
+    console.error("⚠️ Registration status not found in Firestore!");
+  }
+}
+
+// ✅ Make sure this runs after DOM loads
+document.addEventListener("DOMContentLoaded", checkRegistrationStatus);
+</script>
+
+</body>
+</html>
